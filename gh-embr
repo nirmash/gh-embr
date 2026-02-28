@@ -1,35 +1,125 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Hello gh-embr!"
+if ! type -p embr >/dev/null; then
+  echo "Error: embr CLI not found in PATH." >&2
+  echo "Install it from: https://github.com/coreai-microsoft/embr" >&2
+  exit 1
+fi
 
-# Snippets to help get started:
+# Resolve a local directory path to owner/repo via its git remote origin.
+# Supports both HTTPS and SSH remote URL formats.
+resolve_repo() {
+  local dir
+  dir=$(cd "$1" 2>/dev/null && pwd) || { echo "Error: '$1' is not a valid directory" >&2; return 1; }
+  if ! git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "Error: '$1' is not a git repository" >&2
+    return 1
+  fi
+  local url
+  if ! url=$(git -C "$dir" remote get-url origin 2>/dev/null) || [ -z "$url" ]; then
+    echo "Error: no 'origin' remote found in '$1'" >&2
+    return 1
+  fi
+  url="${url%.git}"
+  local repo_name
+  repo_name=$(echo "$url" | sed -E 's#.+[:/][^/]+/([^/]+)$#\1#')
+  local owner
+  owner=$(gh auth status 2>&1 | grep -o 'account [^ ]*' | head -1 | awk '{print $2}')
+  if [ -z "$owner" ]; then
+    echo "Error: not logged in to GitHub. Run 'gh auth login' first." >&2
+    return 1
+  fi
+  echo "${owner}/${repo_name}"
+}
 
-# Determine if an executable is in the PATH
-# if ! type -p ruby >/dev/null; then
-#   echo "Ruby not found on the system" >&2
-#   exit 1
-# fi
+# Returns 0 if the value looks like a local directory path (not an owner/repo).
+is_local_path() {
+  [[ "$1" =~ ^[./~] ]] && [ -d "$1" ]
+}
 
-# Pass arguments through to another command
-# gh issue list "$@" -R cli/cli
+# If arg is a local path, resolve to owner/repo; otherwise pass through unchanged.
+try_resolve() {
+  if is_local_path "$1"; then
+    resolve_repo "$1" || exit 1
+  else
+    echo "$1"
+  fi
+}
 
-# Using the gh api command to retrieve and format information
-# QUERY='
-#   query($endCursor: String) {
-#     viewer {
-#       repositories(first: 100, after: $endCursor) {
-#         nodes {
-#           nameWithOwner
-#           stargazerCount
-#         }
-#       }
-#     }
-#   }
-# '
-# TEMPLATE='
-#   {{- range $repo := .data.viewer.repositories.nodes -}}
-#     {{- printf "name: %s - stargazers: %v\n" $repo.nameWithOwner $repo.stargazerCount -}}
-#   {{- end -}}
-# '
-# exec gh api graphql -f query="${QUERY}" --paginate --template="${TEMPLATE}"
+args=("$@")
+new_args=()
+i=0
+
+while [ $i -lt ${#args[@]} ]; do
+  case "${args[$i]}" in
+
+    # --- projects create -r <owner/repo> | --repo <owner/repo> ---
+    -r|--repo)
+      new_args+=("${args[$i]}")
+      i=$((i + 1))
+      if [ $i -lt ${#args[@]} ]; then
+        new_args+=("$(try_resolve "${args[$i]}")")
+        i=$((i + 1))
+      fi
+      ;;
+
+    # --- projects get-by-repo <owner> <repo>  OR  <local-path> ---
+    get-by-repo)
+      new_args+=("get-by-repo")
+      i=$((i + 1))
+      # Forward any leading options before positional args
+      while [ $i -lt ${#args[@]} ] && [[ "${args[$i]}" == -* ]]; do
+        new_args+=("${args[$i]}")
+        i=$((i + 1))
+      done
+      # If next positional arg is a local path, resolve and split into owner + repo
+      if [ $i -lt ${#args[@]} ] && is_local_path "${args[$i]}"; then
+        resolved=$(resolve_repo "${args[$i]}") || exit 1
+        new_args+=("${resolved%%/*}" "${resolved#*/}")
+        i=$((i + 1))
+      fi
+      ;;
+
+    # --- quickstart deploy <repo> ---
+    deploy)
+      new_args+=("deploy")
+      i=$((i + 1))
+      # Only transform when inside "quickstart deploy"
+      in_quickstart=false
+      for prev in "${new_args[@]}"; do
+        [[ "$prev" == "quickstart" ]] && in_quickstart=true
+      done
+      if $in_quickstart; then
+        # Skip options to find the positional <repo> arg
+        while [ $i -lt ${#args[@]} ]; do
+          if [[ "${args[$i]}" == -* ]]; then
+            new_args+=("${args[$i]}")
+            i=$((i + 1))
+            # Options that consume a value
+            case "${args[$((i-1))]}" in
+              -i|--installation-id|-b|--branch|-n|--env-name)
+                if [ $i -lt ${#args[@]} ]; then
+                  new_args+=("${args[$i]}")
+                  i=$((i + 1))
+                fi
+                ;;
+            esac
+          else
+            # Positional arg — this is <repo>
+            new_args+=("$(try_resolve "${args[$i]}")")
+            i=$((i + 1))
+            break
+          fi
+        done
+      fi
+      ;;
+
+    *)
+      new_args+=("${args[$i]}")
+      i=$((i + 1))
+      ;;
+  esac
+done
+
+exec embr "${new_args[@]}"
