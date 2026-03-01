@@ -114,6 +114,16 @@ This single command will:
 5. Wait for build completion
 6. Create a deployment
 
+> **IMPORTANT: Stream the output live.** The quickstart command shows a real-time deployment
+> pipeline with progress indicators. To let the user see this progress as it happens:
+>
+> 1. Run the command using `bash` with `mode: "async"`
+> 2. Use `read_bash` with `delay: 15` to poll output every 15 seconds
+> 3. Keep reading until the command exits (look for "Quickstart complete" or an error)
+>
+> **Do NOT** run this command in sync mode with a long `initial_wait` — that hides the
+> live progress from the user until the entire deployment finishes.
+
 > **Note:** You do NOT need an installation ID. Once you've run `gh embr login`, the installation ID is already cached in your CLI context and is resolved automatically.
 
 ---
