@@ -22,11 +22,15 @@ GitHub Repo → Embr Project → Environment (branch) → Build → Deployment �
 ### The Core Loop
 
 1. **Push code** to GitHub
-2. **Build** is triggered (manually or via webhook)
+2. **Build** is triggered automatically (webhook fires on push)
 3. **Deployment** is created from successful build
 4. **Traffic shifts** to new deployment
 5. **Validate** your changes via the environment URL
 6. **Repeat**
+
+> **IMPORTANT:** For existing projects, just `git push` is enough. The webhook automatically
+> triggers a build and deployment. Do NOT call `gh embr quickstart deploy` or
+> `gh embr builds trigger` for routine updates — that causes duplicate deployments.
 
 ---
 
@@ -87,8 +91,10 @@ Your repository should contain:
 
 ## Step 3: Create a Project
 
-> **ALWAYS use `gh embr quickstart deploy` to create a project.** This is the only way to set up a new project.
+> **ALWAYS use `gh embr quickstart deploy` to create a NEW project.** This is only for initial setup.
 > It handles everything in one command — no installation IDs, no manual steps.
+> **For existing projects, just `git push` — the webhook handles build and deploy automatically.
+> Do NOT run quickstart deploy again on an existing project as it causes duplicate deployments.**
 
 ```bash
 # Deploy from the current local repo directory (recommended)
@@ -282,22 +288,21 @@ gh embr builds trigger --commit $(git rev-parse HEAD)
 # Make changes to your code
 # ...
 
-# Push to GitHub
+# Push to GitHub — webhook auto-triggers build + deploy
 git add .
 git commit -m "My changes"
 git push
 
-# Trigger build
-gh embr builds trigger --commit $(git rev-parse HEAD)
-
-# Watch the build
-gh embr builds stream <buildId>
-
-# Once deployed, check the environment URL
+# Check the environment URL to validate
 gh embr environments get
 
 # Validate your changes at the URL
 # Use Playwright MCP or browser to test
+```
+
+> **Note:** You do NOT need to manually trigger builds. Pushing to GitHub is enough —
+> the webhook fires automatically. Only use `gh embr builds trigger` if the webhook
+> did not fire (rare).
 ```
 
 ---
@@ -359,21 +364,20 @@ gh embr environments create --name pr-123 --branch feature/my-pr
 gh embr builds trigger --commit <pr-head-sha>
 # ... validate at the environment URL ...
 
-# 3. After PR is merged, switch to production
+# 3. After PR is merged, push to main triggers auto-deploy
 gh embr config context -e <production-env-id>
-
-# 4. Trigger production build (if webhook didn't fire)
 git checkout main
 git pull
-gh embr builds trigger --commit $(git rev-parse HEAD)
+# Webhook will auto-deploy — no manual trigger needed
 ```
 
 ### Webhook Behavior
 
-Embr has webhooks configured to automatically trigger builds on push events. However:
+Embr has webhooks configured to automatically trigger builds and deployments on push events.
+**For existing projects, just `git push` — no need to manually trigger builds.**
 
-- **Webhooks may not always fire** — network issues, GitHub delays, etc.
-- **If no build appears** after pushing, trigger one manually:
+- Webhooks reliably fire on every push to the tracked branch
+- If no build appears after ~60 seconds, trigger one manually as a fallback:
 
 ```bash
 gh embr builds trigger --commit <sha>
@@ -432,34 +436,23 @@ gh embr config context -p <projectId> -e <environmentId>
 # 1. Make code changes
 code src/app.py
 
-# 2. Commit and push
+# 2. Commit and push — webhook auto-deploys
 git add .
 git commit -m "Add user authentication"
 git push
 
-# 3. Trigger build
-gh embr builds trigger --commit $(git rev-parse HEAD)
-
-# 4. Watch build progress
-gh embr builds stream <buildId>
-
-# 5. If build fails, check logs and fix
-gh embr builds logs <buildId>
-# ... fix issues ...
-git add . && git commit -m "Fix build" && git push
-gh embr builds trigger --commit $(git rev-parse HEAD)
-
-# 6. Once build succeeds, check deployment
-gh embr deployments list
-
-# 7. Get the environment URL
+# 3. Wait ~30-60s for build + deploy, then check
 gh embr environments get
 # Output shows: url: https://production-my-app-abc123.embrdev.io
 
-# 8. Validate changes (use Playwright MCP or browser)
+# 4. Validate changes (use Playwright MCP or browser)
 # Navigate to the URL and test your changes
 
-# 9. Repeat for next change
+# 5. If something went wrong, check build logs
+gh embr deployments list
+gh embr builds logs <buildId>
+
+# 6. Repeat for next change
 ```
 
 ---
@@ -498,11 +491,11 @@ gh embr config profile save my-app-dev
 gh embr config profile use my-app-prod
 ```
 
-### 2. Quick Build-Deploy Cycle
+### 2. Quick Push-Deploy Cycle
 
 ```bash
-# One-liner: push and build
-git push && gh embr builds trigger --commit $(git rev-parse HEAD)
+# One-liner: commit and push (webhook auto-deploys)
+git add . && git commit -m "Quick fix" && git push
 ```
 
 ### 3. Monitor Multiple Builds
@@ -576,4 +569,4 @@ gh embr deployments list
 | Validate | `gh embr environments get` | Get URL to test your app |
 | Rollback | `gh embr deployments activate` | Revert to previous version |
 
-The key is to **iterate quickly**: push code, trigger builds, validate at the URL, and repeat.
+The key is to **iterate quickly**: push code and validate at the URL. Webhooks handle building and deploying automatically.
