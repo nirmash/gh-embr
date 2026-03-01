@@ -39,6 +39,16 @@ command: gh embr quickstart deploy <owner/repo> 2>&1
 
 This single command creates the project, production environment, triggers a build, and waits for deployment.
 
+> **IMPORTANT: Stream the output live.** The quickstart command shows a real-time deployment
+> pipeline with progress indicators. To let the user see this progress as it happens:
+>
+> 1. Run the command using `bash` with `mode: "async"` (or equivalent streaming execution)
+> 2. Poll for output every 15 seconds using `read_bash` (or equivalent read tool)
+> 3. Keep reading until the command exits (look for "Quickstart complete" or an error)
+>
+> **Do NOT** run this command in a blocking/sync mode with a long timeout — that hides the
+> live progress from the user until the entire deployment finishes.
+
 ### Expected outcomes
 
 **Success:** All steps complete and output shows a deployment ID and environment URL. Proceed to Step 3 to confirm.
