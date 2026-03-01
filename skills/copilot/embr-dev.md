@@ -38,25 +38,25 @@ GitHub Repo → Embr Project → Environment (branch) → Build → Deployment �
 ### Check auth status
 
 ```bash
-embr auth status
+gh embr auth status
 ```
 
 If the output shows "Ready to use Embr CLI", skip to Step 2.
 
 ### If not logged in
 
-> **DO NOT run `embr login` yourself.** The login command uses an interactive device code flow
+> **DO NOT run `gh embr login` yourself.** The login command uses an interactive device code flow
 > that blocks until the user completes authorization in their browser. Running it from an agent
 > will not work reliably — the process may be killed before the token is saved.
 >
-> Instead, **ask the user to run `embr login` in their own terminal**:
+> Instead, **ask the user to run `gh embr login` in their own terminal**:
 
 Tell the user:
 
 ```
 You need to log in to Embr first. Please run this in your terminal:
 
-  embr login
+  gh embr login
 
 It will give you a code and open your browser. Enter the code at GitHub to authorize.
 Once you see "Logged in as <username>", come back and I'll continue.
@@ -65,10 +65,10 @@ Once you see "Logged in as <username>", come back and I'll continue.
 After the user confirms they have logged in, verify:
 
 ```bash
-embr auth status
+gh embr auth status
 ```
 
-**Do NOT proceed until `embr auth status` confirms authentication.**
+**Do NOT proceed until `gh embr auth status` confirms authentication.**
 
 ---
 
@@ -87,18 +87,23 @@ Your repository should contain:
 
 ## Step 3: Create a Project
 
-> **ALWAYS use `embr quickstart deploy` to create a project.** This is the only way to set up a new project.
+> **ALWAYS use `gh embr quickstart deploy` to create a project.** This is the only way to set up a new project.
 > It handles everything in one command — no installation IDs, no manual steps.
-> All you need is the GitHub repo name.
 
 ```bash
-embr quickstart deploy <owner/repo>
+# Deploy from the current local repo directory (recommended)
+gh embr quickstart deploy .
+
+# Or specify a GitHub repo directly
+gh embr quickstart deploy <owner/repo>
 ```
 
 **Example:**
 
 ```bash
-embr quickstart deploy myorg/my-web-app
+gh embr quickstart deploy .
+# or
+gh embr quickstart deploy myorg/my-web-app
 ```
 
 This single command will:
@@ -109,7 +114,7 @@ This single command will:
 5. Wait for build completion
 6. Create a deployment
 
-> **Note:** You do NOT need an installation ID. Once you've run `embr login`, the installation ID is already cached in your CLI context and is resolved automatically.
+> **Note:** You do NOT need an installation ID. Once you've run `gh embr login`, the installation ID is already cached in your CLI context and is resolved automatically.
 
 ---
 
@@ -122,10 +127,10 @@ Trigger a build from a specific commit:
 git rev-parse HEAD
 
 # Trigger the build
-embr builds trigger --commit <sha>
+gh embr builds trigger --commit <sha>
 
 # Example
-embr builds trigger --commit abc123def456
+gh embr builds trigger --commit abc123def456
 ```
 
 ### Monitor Build Progress
@@ -134,10 +139,10 @@ Watch the build logs in real-time:
 
 ```bash
 # Stream logs as the build progresses
-embr builds stream <buildId>
+gh embr builds stream <buildId>
 
 # Or get logs after completion
-embr builds logs <buildId>
+gh embr builds logs <buildId>
 ```
 
 ---
@@ -153,10 +158,10 @@ When a build succeeds, a deployment is automatically created. The deployment:
 
 ```bash
 # List deployments
-embr deployments list
+gh embr deployments list
 
 # Get specific deployment details
-embr deployments get <deploymentId>
+gh embr deployments get <deploymentId>
 ```
 
 ---
@@ -167,7 +172,7 @@ After the first successful deployment, your environment will have a live URL:
 
 ```bash
 # Get environment details including the URL
-embr environments get
+gh embr environments get
 ```
 
 The URL format is typically: `https://<environment-name>-<project>-<hash>.embrdev.io`
@@ -197,10 +202,10 @@ If a build fails, you need to diagnose and fix the issue.
 
 ```bash
 # Get the full build logs
-embr builds logs <buildId>
+gh embr builds logs <buildId>
 
 # Or stream if still running
-embr builds stream <buildId>
+gh embr builds stream <buildId>
 ```
 
 ### Common Failure Causes
@@ -218,7 +223,7 @@ embr builds stream <buildId>
 For intermittent failures, simply trigger a new build with the same commit:
 
 ```bash
-embr builds trigger --commit <same-sha>
+gh embr builds trigger --commit <same-sha>
 ```
 
 For code issues, fix the problem, push to GitHub, and trigger a new build:
@@ -229,7 +234,7 @@ git commit -m "Fix build issue"
 git push
 
 # Trigger build with new commit
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 ```
 
 ---
@@ -273,13 +278,13 @@ git commit -m "My changes"
 git push
 
 # Trigger build
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 
 # Watch the build
-embr builds stream <buildId>
+gh embr builds stream <buildId>
 
 # Once deployed, check the environment URL
-embr environments get
+gh embr environments get
 
 # Validate your changes at the URL
 # Use Playwright MCP or browser to test
@@ -303,26 +308,26 @@ git commit -m "Add new feature"
 git push -u origin feature/new-feature
 
 # Create an Embr environment for this branch
-embr environments create --name feature-new-feature --branch feature/new-feature
+gh embr environments create --name feature-new-feature --branch feature/new-feature
 
 # Set context to work with this environment
-embr config context -e <new-environment-id>
+gh embr config context -e <new-environment-id>
 
 # Trigger a build
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 ```
 
 ### Managing Multiple Environments
 
 ```bash
 # List all environments for your project
-embr environments list
+gh embr environments list
 
 # Switch context between environments
-embr config context -e <environmentId>
+gh embr config context -e <environmentId>
 
 # Check a specific environment's URL
-embr environments get -e <environmentId>
+gh embr environments get -e <environmentId>
 ```
 
 ---
@@ -338,19 +343,19 @@ embr environments get -e <environmentId>
 
 ```bash
 # 1. Create environment for your PR branch
-embr environments create --name pr-123 --branch feature/my-pr
+gh embr environments create --name pr-123 --branch feature/my-pr
 
 # 2. Trigger build and test
-embr builds trigger --commit <pr-head-sha>
+gh embr builds trigger --commit <pr-head-sha>
 # ... validate at the environment URL ...
 
 # 3. After PR is merged, switch to production
-embr config context -e <production-env-id>
+gh embr config context -e <production-env-id>
 
 # 4. Trigger production build (if webhook didn't fire)
 git checkout main
 git pull
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 ```
 
 ### Webhook Behavior
@@ -361,7 +366,7 @@ Embr has webhooks configured to automatically trigger builds on push events. How
 - **If no build appears** after pushing, trigger one manually:
 
 ```bash
-embr builds trigger --commit <sha>
+gh embr builds trigger --commit <sha>
 ```
 
 ### Future: Automatic PR Environments
@@ -386,10 +391,10 @@ If a deployment has issues, roll back to a previous version:
 
 ```bash
 # List deployments to find a previous working version
-embr deployments list
+gh embr deployments list
 
 # Activate (rollback to) a previous deployment
-embr deployments activate <previous-deployment-id>
+gh embr deployments activate <previous-deployment-id>
 ```
 
 Traffic immediately shifts back to the previous deployment.
@@ -404,13 +409,13 @@ Here's a full example of a typical development session:
 # === Initial Setup (one-time) ===
 
 # Login to Embr (caches installation ID automatically)
-embr auth login
+gh embr auth login
 
 # Use quickstart to create project, environment, build, and deploy in one step
-embr quickstart deploy myorg/my-app
+gh embr quickstart deploy .
 
 # Set context for future commands
-embr config context -p <projectId> -e <environmentId>
+gh embr config context -p <projectId> -e <environmentId>
 
 # === Daily Development ===
 
@@ -423,22 +428,22 @@ git commit -m "Add user authentication"
 git push
 
 # 3. Trigger build
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 
 # 4. Watch build progress
-embr builds stream <buildId>
+gh embr builds stream <buildId>
 
 # 5. If build fails, check logs and fix
-embr builds logs <buildId>
+gh embr builds logs <buildId>
 # ... fix issues ...
 git add . && git commit -m "Fix build" && git push
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 
 # 6. Once build succeeds, check deployment
-embr deployments list
+gh embr deployments list
 
 # 7. Get the environment URL
-embr environments get
+gh embr environments get
 # Output shows: url: https://production-my-app-abc123.embrdev.io
 
 # 8. Validate changes (use Playwright MCP or browser)
@@ -455,7 +460,7 @@ After getting your environment URL, use Playwright MCP to automate validation:
 
 ```bash
 # Get your environment URL
-embr environments get
+gh embr environments get
 # → url: https://production-my-app-abc123.embrdev.io
 ```
 
@@ -477,38 +482,38 @@ This enables automated validation of your deployments without leaving your devel
 
 ```bash
 # Save current context as a profile
-embr config profile save my-app-dev
+gh embr config profile save my-app-dev
 
 # Switch between projects easily
-embr config profile use my-app-prod
+gh embr config profile use my-app-prod
 ```
 
 ### 2. Quick Build-Deploy Cycle
 
 ```bash
 # One-liner: push and build
-git push && embr builds trigger --commit $(git rev-parse HEAD)
+git push && gh embr builds trigger --commit $(git rev-parse HEAD)
 ```
 
 ### 3. Monitor Multiple Builds
 
 ```bash
 # List recent builds across all environments
-embr builds list-project
+gh embr builds list-project
 ```
 
 ### 4. JSON Output for Scripting
 
 ```bash
 # Get environment URL programmatically
-embr environments get --json | jq -r '.url'
+gh embr environments get --json | jq -r '.url'
 ```
 
 ### 5. Check Build Status Before Waiting
 
 ```bash
 # Quick status check
-embr builds get <buildId>
+gh embr builds get <buildId>
 ```
 
 ---
@@ -519,23 +524,23 @@ embr builds get <buildId>
 
 If webhooks don't fire after a push:
 ```bash
-embr builds trigger --commit $(git rev-parse HEAD)
+gh embr builds trigger --commit $(git rev-parse HEAD)
 ```
 
 ### Can't Find Environment URL
 
 The URL only appears after the first successful deployment:
 ```bash
-embr environments get
+gh embr environments get
 # If url is null, check that a deployment completed successfully
-embr deployments list
+gh embr deployments list
 ```
 
 ### Deployment Not Receiving Traffic
 
 Check deployment status:
 ```bash
-embr deployments get <deploymentId>
+gh embr deployments get <deploymentId>
 # Status should be "active" to receive traffic
 ```
 
@@ -543,7 +548,7 @@ embr deployments get <deploymentId>
 
 A new deployment might still be in progress:
 ```bash
-embr deployments list
+gh embr deployments list
 # Check for "deploying" status
 ```
 
@@ -553,12 +558,12 @@ embr deployments list
 
 | Stage | Command | What Happens |
 |-------|---------|--------------|
-| Login | `embr login` | Authenticates and caches installation ID |
-| Setup | `embr quickstart deploy <repo>` | Creates project, environment, builds, and deploys |
-| Build | `embr builds trigger` | Builds your code into an artifact |
-| Monitor | `embr builds stream` | Watch build logs in real-time |
+| Login | `gh embr login` | Authenticates and caches installation ID |
+| Setup | `gh embr quickstart deploy .` | Creates project, environment, builds, and deploys |
+| Build | `gh embr builds trigger` | Builds your code into an artifact |
+| Monitor | `gh embr builds stream` | Watch build logs in real-time |
 | Deploy | (automatic) | Successful build creates deployment |
-| Validate | `embr environments get` | Get URL to test your app |
-| Rollback | `embr deployments activate` | Revert to previous version |
+| Validate | `gh embr environments get` | Get URL to test your app |
+| Rollback | `gh embr deployments activate` | Revert to previous version |
 
 The key is to **iterate quickly**: push code, trigger builds, validate at the URL, and repeat.

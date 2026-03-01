@@ -9,24 +9,24 @@ This skill deploys and manages Embr apps using an ADC sandbox as the execution e
 
 ## Required Inputs
 
-- **Sandbox ID** — the ADC sandbox to run embr commands in (e.g. `621ba7d5-3d98-45b2-9c24-fd60545dfd84`)
+- **Sandbox ID** — the ADC sandbox to run gh embr commands in (e.g. `621ba7d5-3d98-45b2-9c24-fd60545dfd84`)
 - **GitHub repo** — in `owner/repo` format (e.g. `nirmash/nir-embr-test-apps`)
 
 ---
 
 ## Step 1: Verify Auth in the Sandbox
 
-Run `embr auth status` in the sandbox using the `ADC-execute_command` tool:
+Run `gh embr auth status` in the sandbox using the `ADC-execute_command` tool:
 
 ```
 sandboxId: <sandbox-id>
-command: embr auth status 2>&1
+command: gh embr auth status 2>&1
 ```
 
 - If output contains "Ready to use Embr CLI" → proceed.
-- If not authenticated → ask the user to run `embr login` in a terminal that has access to the sandbox, then re-check.
+- If not authenticated → ask the user to run `gh embr login` in a terminal that has access to the sandbox, then re-check.
 
-> **Do NOT run `embr login` yourself.** It requires an interactive browser flow.
+> **Do NOT run `gh embr login` yourself.** It requires an interactive browser flow.
 
 ---
 
@@ -34,7 +34,7 @@ command: embr auth status 2>&1
 
 ```
 sandboxId: <sandbox-id>
-command: embr quickstart deploy <owner/repo> 2>&1
+command: gh embr quickstart deploy <owner/repo> 2>&1
 ```
 
 This single command creates the project, production environment, triggers a build, and waits for deployment.
@@ -57,17 +57,17 @@ The quickstart output includes a deployment ID (`dpl_...`). Use it to confirm th
 
 ```
 sandboxId: <sandbox-id>
-command: embr deployments get <deploymentId> 2>&1
+command: gh embr deployments get <deploymentId> 2>&1
 ```
 
 - **Status: active, Traffic: 100%** → deployment succeeded. Proceed to Step 4.
 - **Status: failed** → check build logs:
   ```
-  command: embr deployments logs <deploymentId> --step build 2>&1
+  command: gh embr deployments logs <deploymentId> --step build 2>&1
   ```
   Fix the issue, push a new commit, and trigger a new build:
   ```
-  command: embr builds trigger --commit <sha> 2>&1
+  command: gh embr builds trigger --commit <sha> 2>&1
   ```
 
 ---
@@ -76,7 +76,7 @@ command: embr deployments get <deploymentId> 2>&1
 
 ```
 sandboxId: <sandbox-id>
-command: embr environments get 2>&1
+command: gh embr environments get 2>&1
 ```
 
 The output includes:
@@ -107,7 +107,7 @@ After a successful deployment, report:
 
 ```
 sandboxId: <sandbox-id>
-command: echo "y" | embr projects delete <projectId> 2>&1
+command: echo "y" | gh embr projects delete <projectId> 2>&1
 ```
 
 Use `echo "y" |` to bypass the interactive confirmation prompt. Confirm the deletion with the user before running, as it is irreversible.
@@ -116,8 +116,8 @@ Use `echo "y" |` to bypass the interactive confirmation prompt. Confirm the dele
 
 ## Key Lessons Learned
 
-- **Always use the ADC sandbox** via `ADC-execute_command` — do not run embr locally.
-- **ECONNREFUSED during polling is not a real failure.** The embr CLI uses a long-poll to stream deployment progress, and the sandbox may drop that connection. Always verify with `embr deployments get`.
+- **Always use the ADC sandbox** via `ADC-execute_command` — do not run gh embr locally.
+- **ECONNREFUSED during polling is not a real failure.** The embr CLI uses a long-poll to stream deployment progress, and the sandbox may drop that connection. Always verify with `gh embr deployments get`.
 - **Retry quickstart once** if it fails before creating any resources (first-attempt network blip).
 - **Auto-deploy is always on** — Embr automatically deploys on every push to the tracked branch. Never manually trigger a build or deployment after a code change; just push to GitHub and the platform handles it.
 - **Interactive confirmations** (e.g. delete) require `echo "y" |` piped to the command since the sandbox is non-interactive.

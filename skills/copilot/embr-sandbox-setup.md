@@ -247,7 +247,7 @@ Replace `<DOWNLOAD_URL>` with the URL obtained in step 6b.
 #### 6d. Verify installation
 
 ```
-command: embr --version
+command: gh embr --version
 ```
 
 **Expected Output:** `0.0.1` (or current version)
@@ -275,10 +275,10 @@ git branch -D "$TEMP_BRANCH"
 curl -s -X POST "$API_URL" \
     -H "X-API-Key: $API_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":302,\"method\":\"tools/call\",\"params\":{\"name\":\"execute_command\",\"arguments\":{\"sandboxId\":\"$SANDBOX_ID\",\"command\":\"embr config set apiUrl https://api.embrdev.io\"}}}" > /dev/null
+    -d "{\"jsonrpc\":\"2.0\",\"id\":302,\"method\":\"tools/call\",\"params\":{\"name\":\"execute_command\",\"arguments\":{\"sandboxId\":\"$SANDBOX_ID\",\"command\":\"gh embr config set apiUrl https://api.embrdev.io\"}}}" > /dev/null
 
 # Verify configuration
-exec_cmd "embr config get" 303
+exec_cmd "gh embr config get" 303
 ```
 
 **Expected Output:**
@@ -306,7 +306,7 @@ sleep 2
 exec_cmd "gh embr version" 305
 ```
 
-**Expected Output:** Same version as `embr --version` (e.g., `0.0.1`)
+**Expected Output:** Same version as `gh embr --version` (e.g., `0.0.1`)
 
 > The extension requires both `gh` and `embr` to be installed first. It forwards all commands to `embr` and resolves local directory paths to `owner/repo` using the authenticated GitHub user.
 
@@ -326,7 +326,7 @@ Follow the device code authentication flow.
 #### 2. Authenticate Embr CLI
 ```bash
 # In the sandbox
-embr login
+gh embr login
 ```
 Follow the device code authentication flow.
 
@@ -343,15 +343,15 @@ Run these in the sandbox to verify everything is working:
 git --version
 gh --version
 node --version
-embr --version
+gh embr --version
 gh embr version
 
 # Check authentication status
 gh auth status
-embr auth status
+gh embr auth status
 
 # Check Embr configuration
-embr config get
+gh embr config get
 ```
 
 ---
@@ -368,7 +368,7 @@ cd repo-name
 
 # Deploy to Embr
 export NODE_TLS_REJECT_UNAUTHORIZED=0  # If needed for SSL issues
-embr quickstart deploy owner/repo-name --branch main -i <installation-id>
+gh embr quickstart deploy owner/repo-name --branch main -i <installation-id>
 ```
 
 ---
@@ -397,7 +397,7 @@ dpkg -l | grep gh
 **Symptom:** `Quickstart failed: Forbidden` with error code 51
 **Solution:** Re-authenticate:
 ```bash
-embr login
+gh embr login
 ```
 The token may have expired or lacks permissions.
 
@@ -478,11 +478,11 @@ Setup is complete when all of the following return successfully:
 ✅ git --version         # Returns git version
 ✅ gh --version          # Returns gh version  
 ✅ node --version        # Returns node version
-✅ embr --version        # Returns embr version
-✅ gh embr version       # Returns embr version (via gh extension)
-✅ embr config get       # Shows apiUrl configuration
+✅ gh embr --version        # Returns gh embr version
+✅ gh embr version       # Returns gh embr version (via gh extension)
+✅ gh embr config get       # Shows apiUrl configuration
 ✅ gh auth status        # Shows authenticated account
-✅ embr auth status      # Shows cached token
+✅ gh embr auth status      # Shows cached token
 ```
 
 ---
@@ -490,10 +490,10 @@ Setup is complete when all of the following return successfully:
 ## Next Steps After Setup
 
 1. **Clone your repository:** `gh repo clone owner/repo`
-2. **Authenticate services:** `gh auth login` and `embr login`
-3. **Deploy application:** `embr quickstart deploy owner/repo --branch main`
+2. **Authenticate services:** `gh auth login` and `gh embr login`
+3. **Deploy application:** `gh embr quickstart deploy owner/repo --branch main`
 4. **Verify deployment:** Check the returned URL
-5. **Monitor logs:** `embr deployments logs <deployment-id>`
+5. **Monitor logs:** `gh embr deployments logs <deployment-id>`
 
 ---
 
