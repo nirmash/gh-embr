@@ -1,11 +1,39 @@
 #!/usr/bin/env bash
 set -e
 
-if ! type -p embr >/dev/null; then
+# --- Check for embr CLI -----------------------------------------------------------
+check_embr_installed() {
+  if type -p embr >/dev/null; then
+    return 0
+  fi
+
   echo "Error: embr CLI not found in PATH." >&2
-  echo "Install it from: https://github.com/coreai-microsoft/embr" >&2
-  exit 1
-fi
+  echo "" >&2
+  echo "Install the Embr CLI from: https://github.com/coreai-microsoft/embr/releases?q=cli" >&2
+  echo "" >&2
+  case "$(uname -s)" in
+    Darwin*)
+      echo "  macOS:   Download embr-installer.pkg from the latest release and double-click to install." >&2
+      echo "           Or install via npm:" >&2
+      echo "             npm install -g @coreai-microsoft/embr-cli --registry=https://npm.pkg.github.com" >&2
+      ;;
+    Linux*)
+      echo "  Linux:   curl -fsSL https://github.com/coreai-microsoft/embr/releases/latest/download/embr-linux-x64 \\" >&2
+      echo "             -o /usr/local/bin/embr && chmod +x /usr/local/bin/embr" >&2
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      echo "  Windows: Download embr-installer.msi from the latest release and run it." >&2
+      echo "           Silent install: msiexec /i embr-installer.msi /quiet" >&2
+      ;;
+    *)
+      echo "  npm:     npm install -g @coreai-microsoft/embr-cli --registry=https://npm.pkg.github.com" >&2
+      ;;
+  esac
+  echo "" >&2
+  return 1
+}
+
+# --- Helper functions --------------------------------------------------------------
 
 # Resolve a local directory path to owner/repo via its git remote origin.
 # Supports both HTTPS and SSH remote URL formats.
@@ -47,79 +75,90 @@ try_resolve() {
   fi
 }
 
-args=("$@")
-new_args=()
-i=0
+# --- Argument rewriting ------------------------------------------------------------
+build_args() {
+  args=("$@")
+  new_args=()
+  i=0
 
-while [ $i -lt ${#args[@]} ]; do
-  case "${args[$i]}" in
+  while [ $i -lt ${#args[@]} ]; do
+    case "${args[$i]}" in
 
-    # --- projects create -r <owner/repo> | --repo <owner/repo> ---
-    -r|--repo)
-      new_args+=("${args[$i]}")
-      i=$((i + 1))
-      if [ $i -lt ${#args[@]} ]; then
-        new_args+=("$(try_resolve "${args[$i]}")")
-        i=$((i + 1))
-      fi
-      ;;
-
-    # --- projects get-by-repo <owner> <repo>  OR  <local-path> ---
-    get-by-repo)
-      new_args+=("get-by-repo")
-      i=$((i + 1))
-      # Forward any leading options before positional args
-      while [ $i -lt ${#args[@]} ] && [[ "${args[$i]}" == -* ]]; do
+      # --- projects create -r <owner/repo> | --repo <owner/repo> ---
+      -r|--repo)
         new_args+=("${args[$i]}")
         i=$((i + 1))
-      done
-      # If next positional arg is a local path, resolve and split into owner + repo
-      if [ $i -lt ${#args[@]} ] && is_local_path "${args[$i]}"; then
-        resolved=$(resolve_repo "${args[$i]}") || exit 1
-        new_args+=("${resolved%%/*}" "${resolved#*/}")
+        if [ $i -lt ${#args[@]} ]; then
+          new_args+=("$(try_resolve "${args[$i]}")")
+          i=$((i + 1))
+        fi
+        ;;
+
+      # --- projects get-by-repo <owner> <repo>  OR  <local-path> ---
+      get-by-repo)
+        new_args+=("get-by-repo")
         i=$((i + 1))
-      fi
-      ;;
-
-    # --- quickstart deploy <repo> ---
-    deploy)
-      new_args+=("deploy")
-      i=$((i + 1))
-      # Only transform when inside "quickstart deploy"
-      in_quickstart=false
-      for prev in "${new_args[@]}"; do
-        [[ "$prev" == "quickstart" ]] && in_quickstart=true
-      done
-      if $in_quickstart; then
-        # Skip options to find the positional <repo> arg
-        while [ $i -lt ${#args[@]} ]; do
-          if [[ "${args[$i]}" == -* ]]; then
-            new_args+=("${args[$i]}")
-            i=$((i + 1))
-            # Options that consume a value
-            case "${args[$((i-1))]}" in
-              -i|--installation-id|-b|--branch|-n|--env-name)
-                if [ $i -lt ${#args[@]} ]; then
-                  new_args+=("${args[$i]}")
-                  i=$((i + 1))
-                fi
-                ;;
-            esac
-          else
-            # Positional arg — this is <repo>
-            new_args+=("$(try_resolve "${args[$i]}")")
-            i=$((i + 1))
-            break
-          fi
+        # Forward any leading options before positional args
+        while [ $i -lt ${#args[@]} ] && [[ "${args[$i]}" == -* ]]; do
+          new_args+=("${args[$i]}")
+          i=$((i + 1))
         done
-      fi
-      ;;
+        # If next positional arg is a local path, resolve and split into owner + repo
+        if [ $i -lt ${#args[@]} ] && is_local_path "${args[$i]}"; then
+          resolved=$(resolve_repo "${args[$i]}") || exit 1
+          new_args+=("${resolved%%/*}" "${resolved#*/}")
+          i=$((i + 1))
+        fi
+        ;;
 
-    *)
-      new_args+=("${args[$i]}")
-      i=$((i + 1))
-      ;;
-  esac
-done
+      # --- quickstart deploy <repo> ---
+      deploy)
+        new_args+=("deploy")
+        i=$((i + 1))
+        # Only transform when inside "quickstart deploy"
+        in_quickstart=false
+        for prev in "${new_args[@]}"; do
+          [[ "$prev" == "quickstart" ]] && in_quickstart=true
+        done
+        if $in_quickstart; then
+          # Skip options to find the positional <repo> arg
+          while [ $i -lt ${#args[@]} ]; do
+            if [[ "${args[$i]}" == -* ]]; then
+              new_args+=("${args[$i]}")
+              i=$((i + 1))
+              # Options that consume a value
+              case "${args[$((i-1))]}" in
+                -i|--installation-id|-b|--branch|-n|--env-name)
+                  if [ $i -lt ${#args[@]} ]; then
+                    new_args+=("${args[$i]}")
+                    i=$((i + 1))
+                  fi
+                  ;;
+              esac
+            else
+              # Positional arg — this is <repo>
+              new_args+=("$(try_resolve "${args[$i]}")")
+              i=$((i + 1))
+              break
+            fi
+          done
+        fi
+        ;;
 
-exec embr "${new_args[@]}"
+      *)
+        new_args+=("${args[$i]}")
+        i=$((i + 1))
+        ;;
+    esac
+  done
+
+  echo "${new_args[@]}"
+}
+
+# --- Main --------------------------------------------------------------------------
+# When sourced for testing, skip the main execution path.
+if [[ "${GH_EMBR_SOURCED:-}" != "1" ]]; then
+  check_embr_installed || exit 1
+  read -ra final_args <<< "$(build_args "$@")"
+  exec embr "${final_args[@]}"
+fi
